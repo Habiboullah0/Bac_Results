@@ -1,36 +1,38 @@
 import { NextResponse } from 'next/server';
-import Database from 'better-sqlite3';
-import path from 'path';
-
-const dbPath = path.join(process.cwd(), 'data', 'bac_results.sqlite');
-const db = new Database(dbPath);
+import { getDatabase } from '../../../lib/db';
 
 export async function GET(request) {
-  const { searchParams } = new URL(request.url);
-  const query = searchParams.get('q');
-
-  if (!query || query.trim().length < 2) {
-    return NextResponse.json([]);
-  }
-
   try {
-    const cleanQuery = query.trim();
-    const isNumeric = /^\d+$/.test(cleanQuery);
+    const { searchParams } = new URL(request.url);
+    const query = searchParams.get('q')?.trim();
+
+    if (!query || query.length < 2) {
+      return NextResponse.json([]);
+    }
+
+    const db = getDatabase();
+    const isNumeric = /^\d+$/.test(query);
 
     if (isNumeric) {
       const student = db
-        .prepare('SELECT * FROM students WHERE seat_number = ? LIMIT 5')
-        .all(cleanQuery);
+        .prepare(`
+          SELECT id, seat_number, name_ar, name_fr, grade, serie, wilaya_ar, school_ar 
+          FROM students 
+          WHERE seat_number = ? 
+          LIMIT 5
+        `)
+        .all(query);
         
       return NextResponse.json(student);
     } else {
       const students = db
-        .prepare(
-          `SELECT * FROM students 
-           WHERE name_ar LIKE ? OR name_fr LIKE ? 
-           LIMIT 15`
-        )
-        .all(`%${cleanQuery}%`, `%${cleanQuery}%`);
+        .prepare(`
+          SELECT id, seat_number, name_ar, name_fr, grade, serie, wilaya_ar, school_ar 
+          FROM students 
+          WHERE name_ar LIKE ? OR name_fr LIKE ? 
+          LIMIT 15
+        `)
+        .all(`%${query}%`, `%${query}%`);
         
       return NextResponse.json(students);
     }

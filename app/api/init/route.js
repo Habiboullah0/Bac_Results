@@ -1,15 +1,13 @@
 import { NextResponse } from 'next/server';
-import Database from 'better-sqlite3';
-import path from 'path';
-
-const dbPath = path.join(process.cwd(), 'data', 'bac_results.sqlite');
-const db = new Database(dbPath);
+import { getDatabase } from '../../../lib/db';
 
 export async function GET() {
   try {
+    const db = getDatabase();
+
     const topStudentsQuery = `
       WITH RankedStudents AS (
-        SELECT *,
+        SELECT id, seat_number, name_ar, name_fr, grade, serie, wilaya_ar, school_ar,
                ROW_NUMBER() OVER (PARTITION BY serie ORDER BY grade DESC) as rank
         FROM students
       )

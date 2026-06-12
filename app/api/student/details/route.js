@@ -1,19 +1,16 @@
 import { NextResponse } from 'next/server';
-import Database from 'better-sqlite3';
-import path from 'path';
-
-const dbPath = path.join(process.cwd(), 'data', 'bac_results.sqlite');
-const db = new Database(dbPath);
+import { getDatabase } from '../../../../lib/db';
 
 export async function GET(request) {
-  const { searchParams } = new URL(request.url);
-  const studentId = searchParams.get('id');
-
-  if (!studentId) {
-    return NextResponse.json({ error: 'ID المطلوب غير موجود' }, { status: 400 });
-  }
-
   try {
+    const { searchParams } = new URL(request.url);
+    const studentId = searchParams.get('id')?.trim();
+
+    if (!studentId) {
+      return NextResponse.json({ error: 'ID المطلوب غير موجود' }, { status: 400 });
+    }
+
+    const db = getDatabase();
     const student = db.prepare('SELECT * FROM students WHERE id = ?').get(studentId);
 
     if (!student) {
