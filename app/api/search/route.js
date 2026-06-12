@@ -1,14 +1,9 @@
 import { NextResponse } from 'next/server';
-import sqlite3 from 'sqlite3';
-import { open } from 'sqlite';
+import Database from 'better-sqlite3';
 import path from 'path';
 
-async function openDb() {
-  return open({
-    filename: path.join(process.cwd(), 'data', 'bac_results.sqlite'),
-    driver: sqlite3.Database,
-  });
-}
+const dbPath = path.join(process.cwd(), 'data', 'bac_results.sqlite');
+const db = new Database(dbPath);
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
@@ -19,24 +14,24 @@ export async function GET(request) {
   }
 
   try {
-    const db = await openDb();
     const cleanQuery = query.trim();
-
     const isNumeric = /^\d+$/.test(cleanQuery);
 
     if (isNumeric) {
-      const student = await db.all(
-        'SELECT * FROM students WHERE seat_number = ? LIMIT 5', 
-        [cleanQuery]
-      );
+      const student = db
+        .prepare('SELECT * FROM students WHERE seat_number = ? LIMIT 5')
+        .all(cleanQuery);
+        
       return NextResponse.json(student);
     } else {
-      const students = await db.all(
-        `SELECT * FROM students 
-         WHERE name_ar LIKE ? OR name_fr LIKE ? 
-         LIMIT 15`,
-        [`%${cleanQuery}%`, `%${cleanQuery}%`]
-      );
+      const students = db
+        .prepare(
+          `SELECT * FROM students 
+           WHERE name_ar LIKE ? OR name_fr LIKE ? 
+           LIMIT 15`
+        )
+        .all(`%${cleanQuery}%`, `%${cleanQuery}%`);
+        
       return NextResponse.json(students);
     }
 

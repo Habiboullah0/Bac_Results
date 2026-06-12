@@ -1,14 +1,9 @@
 import { NextResponse } from 'next/server';
-import sqlite3 from 'sqlite3';
-import { open } from 'sqlite';
+import Database from 'better-sqlite3';
 import path from 'path';
 
-async function openDb() {
-  return open({
-    filename: path.join(process.cwd(), 'data', 'bac_results.sqlite'),
-    driver: sqlite3.Database,
-  });
-}
+const dbPath = path.join(process.cwd(), 'data', 'bac_results.sqlite');
+const db = new Database(dbPath);
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
@@ -19,9 +14,7 @@ export async function GET(request) {
   }
 
   try {
-    const db = await openDb();
-
-    const student = await db.get('SELECT * FROM students WHERE id = ?', [studentId]);
+    const student = db.prepare('SELECT * FROM students WHERE id = ?').get(studentId);
 
     if (!student) {
       return NextResponse.json({ message: 'الطالب غير موجود' }, { status: 404 });
@@ -29,20 +22,17 @@ export async function GET(request) {
 
     const { grade, serie, wilaya_ar, school_ar } = student;
 
-    const natRankRes = await db.get(
-      'SELECT COUNT(*) + 1 AS rank FROM students WHERE grade > ? AND serie = ?',
-      [grade, serie]
-    );
+    const natRankRes = db
+      .prepare('SELECT COUNT(*) + 1 AS rank FROM students WHERE grade > ? AND serie = ?')
+      .get(grade, serie);
 
-    const wilRankRes = await db.get(
-      'SELECT COUNT(*) + 1 AS rank FROM students WHERE grade > ? AND serie = ? AND wilaya_ar = ?',
-      [grade, serie, wilaya_ar]
-    );
+    const wilRankRes = db
+      .prepare('SELECT COUNT(*) + 1 AS rank FROM students WHERE grade > ? AND serie = ? AND wilaya_ar = ?')
+      .get(grade, serie, wilaya_ar);
 
-    const schRankRes = await db.get(
-      'SELECT COUNT(*) + 1 AS rank FROM students WHERE grade > ? AND serie = ? AND school_ar = ?',
-      [grade, serie, school_ar]
-    );
+    const schRankRes = db
+      .prepare('SELECT COUNT(*) + 1 AS rank FROM students WHERE grade > ? AND serie = ? AND school_ar = ?')
+      .get(grade, serie, school_ar);
 
     return NextResponse.json({
       info: student,

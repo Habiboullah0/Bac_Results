@@ -1,19 +1,12 @@
 import { NextResponse } from 'next/server';
-import sqlite3 from 'sqlite3';
-import { open } from 'sqlite';
+import Database from 'better-sqlite3';
 import path from 'path';
 
-async function openDb() {
-  return open({
-    filename: path.join(process.cwd(), 'data', 'bac_results.sqlite'),
-    driver: sqlite3.Database,
-  });
-}
+const dbPath = path.join(process.cwd(), 'data', 'bac_results.sqlite');
+const db = new Database(dbPath);
 
 export async function GET() {
   try {
-    const db = await openDb();
-
     const topStudentsQuery = `
       WITH RankedStudents AS (
         SELECT *,
@@ -22,21 +15,22 @@ export async function GET() {
       )
       SELECT * FROM RankedStudents WHERE rank <= 10;
     `;
-    const topStudents = await db.all(topStudentsQuery);
+    
+    const topStudents = db.prepare(topStudentsQuery).all();
 
-    const wilayas = await db.all(`
+    const wilayas = db.prepare(`
       SELECT DISTINCT wilaya_ar, wilaya_fr 
       FROM students 
       WHERE wilaya_ar IS NOT NULL 
       ORDER BY wilaya_ar ASC
-    `);
+    `).all();
 
-    const schools = await db.all(`
+    const schools = db.prepare(`
       SELECT DISTINCT school_ar, school_fr 
       FROM students 
       WHERE school_ar IS NOT NULL 
       ORDER BY school_ar ASC
-    `);
+    `).all();
 
     return NextResponse.json({
       topStudents,
